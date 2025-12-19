@@ -2,8 +2,8 @@
 FROM gcc:11 AS build
 WORKDIR /app
 COPY . .
-# Compilation du serveur
-RUN gcc -o serveur serveur.c
+# Compilation du serveur avec static linking
+RUN gcc -static -o serveur serveur.c
 
 # --- ÉTAPE 2: Final Stage (Image Légère) ---
 FROM alpine:latest

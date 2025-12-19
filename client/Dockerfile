@@ -2,8 +2,8 @@
 FROM gcc:11 AS build
 WORKDIR /app
 COPY . .
-# Compilation du client
-RUN gcc -o client client.c
+# Compilation du client avec static linking
+RUN gcc -static -o client client.c
 
 # --- ÉTAPE 2: Final Stage (Image Légère) ---
 FROM alpine:latest
