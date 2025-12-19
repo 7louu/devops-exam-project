@@ -17,9 +17,9 @@ spec:
       containers:
       - name: serveur
         # L'image sera mise à jour par Jenkins. Utilisez un placeholder pour l'instant.
-        image: monuser/monapp-serveur:latest 
+        image: 7lou/monapp-serveur:latest 
         ports:
-        - containerPort: 6000
+        - containerPort: 5000
 ---
 # Définition du Service pour le Serveur (Accès interne au cluster)
 apiVersion: v1
@@ -31,6 +31,6 @@ spec:
     app: serveur
   ports:
     - protocol: TCP
-      port: 6000
-      targetPort: 6000
+      port: 5000
+      targetPort: 5000
   type: ClusterIP

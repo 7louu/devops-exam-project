@@ -4,7 +4,7 @@ pipeline {
     // Définir les variables globales
     environment {
         DOCKER_REGISTRY = 'docker.io'
-        DOCKER_USERNAME = 'monuser' // Votre nom d'utilisateur Docker Hub
+        DOCKER_USERNAME = '7lou'
         REPO_NAME = 'monapp'
         IMAGE_SERVER = "${DOCKER_USERNAME}/${REPO_NAME}-serveur"
         IMAGE_CLIENT = "${DOCKER_USERNAME}/${REPO_NAME}-client"
@@ -45,33 +45,38 @@ pipeline {
         
         stage('Docker Push to Registry') {
             steps {
-                // IMPORTANT : Nécessite un Credential ID Jenkins pour votre Docker Hub (voir 5.1)
+                // IMPORTANT : Nécessite un Credential ID Jenkins pour votre Docker Hub
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USER')]) {
                     sh "echo \"${DOCKER_PASSWORD}\" | docker login -u ${DOCKER_USER} --password-stdin ${DOCKER_REGISTRY}"
 
-                    def imageTag = "build-${env.BUILD_NUMBER}"
+                    script {
+                        def imageTag = "build-${env.BUILD_NUMBER}"
 
-                    // Push les tags
-                    sh "docker push ${IMAGE_SERVER}:${imageTag}"
-                    sh "docker push ${IMAGE_CLIENT}:${imageTag}"
-                    
-                    // Push les tags latest
-                    sh "docker push ${IMAGE_SERVER}:latest"
-                    sh "docker push ${IMAGE_CLIENT}:latest"
+                        // Push les tags
+                        sh "docker push ${IMAGE_SERVER}:${imageTag}"
+                        sh "docker push ${IMAGE_CLIENT}:${imageTag}"
+                        
+                        // Push les tags latest
+                        sh "docker push ${IMAGE_SERVER}:latest"
+                        sh "docker push ${IMAGE_CLIENT}:latest"
+                    }
                 }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                // Met à jour les fichiers de manifeste avec le bon tag d'image
-                sh "sed -i 's|image: .*monapp-serveur:.*|image: ${IMAGE_SERVER}:${env.BUILD_NUMBER}|g' ci-cd-config/k8s-serveur-deployment.yaml"
-                sh "sed -i 's|image: .*monapp-client:.*|image: ${IMAGE_CLIENT}:${env.BUILD_NUMBER}|g' ci-cd-config/k8s-client-deployment.yaml"
-                
-                // Applique les manifestes au cluster Minikube
-                // NOTE: Ceci fonctionne car Jenkins accède au moteur Docker de l'hôte, et kubectl est supposé être accessible par l'utilisateur 'root' du conteneur Jenkins.
-                sh "kubectl apply -f ci-cd-config/k8s-serveur-deployment.yaml"
-                sh "kubectl apply -f ci-cd-config/k8s-client-deployment.yaml"
+                script {
+                    def imageTag = "build-${env.BUILD_NUMBER}"
+                    
+                    // Met à jour les fichiers de manifeste avec le bon tag d'image
+                    sh """
+                        sed 's|image: .*monapp-serveur:.*|image: ${IMAGE_SERVER}:${imageTag}|g' ci-cd-config/k8s-serveur-deployment.yaml > /tmp/k8s-serveur.yaml
+                        sed 's|image: .*monapp-client:.*|image: ${IMAGE_CLIENT}:${imageTag}|g' ci-cd-config/k8s-client-deployment.yaml > /tmp/k8s-client.yaml
+                        kubectl apply -f /tmp/k8s-serveur.yaml
+                        kubectl apply -f /tmp/k8s-client.yaml
+                    """
+                }
             }
         }
     }
